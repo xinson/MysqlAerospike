@@ -1,14 +1,18 @@
 <?php
 namespace xinson\MysqlAerospike;
+
 use PDO;
-
-class Mysql extends PDO{
-
-    public $service;
-    public $database;
-    public $user;
-    public $password;
-    public $port;
+/**
+ * Class Mysql
+ * @package xinson\MysqlAerospike
+ */
+class Mysql extends PDO
+{
+    protected $service;
+    protected $database;
+    protected $user;
+    protected $password;
+    protected $port;
 
     /**
      * Mysql constructor.
@@ -26,7 +30,8 @@ class Mysql extends PDO{
         $this->password = $password;
         $this->port = $port;
 
-        parent::__construct("mysql:host=$this->service;port=$port;dbname=$this->database",$this->user,$this->password);
+        parent::__construct("mysql:host=$this->service;port=$port;dbname=$this->database", $this->user,
+            $this->password);
         $this->query("SET NAMES utf8");
     }
 
@@ -38,21 +43,21 @@ class Mysql extends PDO{
      */
     public function getOne($table, array $field = array(), array $condition = array())
     {
-        if(empty($field)){
+        if (empty($field)) {
             $fields = '*';
-        }else {
+        } else {
             $fields = implode(',', $field);
         }
         $where = '';
-        if(!empty($condition)) {
+        if (!empty($condition)) {
             $conditions = array();
             foreach ($condition as $k => $v) {
                 $conditions[] = $k . ' = :' . $k;
             }
-            $where =  " WHERE ". implode(' AND ', $conditions);
+            $where = " WHERE " . implode(' AND ', $conditions);
         }
         $stmt = $this->prepare("SELECT {$fields} FROM {$table} $where");
-        if(!empty($condition)) {
+        if (!empty($condition)) {
             foreach ($condition as $k => $v) {
                 $stmt->bindValue(':' . $k, $v);
             }
@@ -64,27 +69,27 @@ class Mysql extends PDO{
 
     /**
      * @param $table
-     * @param array $field  array('id', 'name')
-     * @param array $condition  array('id' => 2, 'name' => 'jack')
+     * @param array $field array('id', 'name')
+     * @param array $condition array('id' => 2, 'name' => 'jack')
      * @return mixed
      */
     public function getAll($table, array $field = array(), array $condition = array())
     {
-        if(empty($field)){
+        if (empty($field)) {
             $fields = '*';
-        }else {
+        } else {
             $fields = implode(',', $field);
         }
         $where = '';
-        if(!empty($condition)) {
+        if (!empty($condition)) {
             $conditions = array();
             foreach ($condition as $k => $v) {
                 $conditions[] = $k . ' = :' . $k;
             }
-            $where =  " WHERE ". implode(' AND ', $conditions);
+            $where = " WHERE " . implode(' AND ', $conditions);
         }
         $stmt = $this->prepare("SELECT {$fields} FROM {$table} $where");
-        if(!empty($condition)) {
+        if (!empty($condition)) {
             foreach ($condition as $k => $v) {
                 $stmt->bindValue(':' . $k, $v);
             }
@@ -96,24 +101,26 @@ class Mysql extends PDO{
 
     /**
      * @param $table
-     * @param array $condition  array('id' => 2, 'name' => 'jack')
+     * @param array $condition array('id' => 2, 'name' => 'jack')
      * @return bool
      */
     public function delete($table, array $condition)
     {
-        if(empty($condition)) return false;
-        $conditions = array();
-        foreach($condition as $k=>$v){
-            $conditions[] = $k .'= :' .$k;
+        if (empty($condition)) {
+            return false;
         }
-        $where  =  " WHERE ". implode(' AND ', $conditions);
+        $conditions = array();
+        foreach ($condition as $k => $v) {
+            $conditions[] = $k . '= :' . $k;
+        }
+        $where = " WHERE " . implode(' AND ', $conditions);
         $stmt = $this->prepare("DELETE FROM {$table} {$where}");
-        foreach($condition as $k=>$v){
+        foreach ($condition as $k => $v) {
             $stmt->bindValue(':' . $k, $v);
         }
-        if($stmt->execute()){
+        if ($stmt->execute()) {
             return true;
-        }else{
+        } else {
             return false;
         }
     }
@@ -125,14 +132,16 @@ class Mysql extends PDO{
      */
     public function insert($table, array $parameter)
     {
-        if(empty($parameter)) return false;
+        if (empty($parameter)) {
+            return false;
+        }
         $arrkeys = implode(',', array_keys($parameter));
-        $arrvalues = implode(',', array_values($parameter));
-        $sql = "INSERT INTO {$table} ({$arrkeys}) VALUES({$arrvalues});";
+        $arrvalues = implode("','", array_values($parameter));
+        $sql = "INSERT INTO {$table} ({$arrkeys}) VALUES('{$arrvalues}');";
         $rs = $this->query($sql);
-        if($rs){
-            $this->lastInsertId();
-        }else{
+        if ($rs) {
+            return $this->lastInsertId();
+        } else {
             return false;
         }
     }
@@ -140,33 +149,32 @@ class Mysql extends PDO{
     /**
      * @param $table
      * @param array $parameter array('name' => 'jack', 'email' => 'someone@email.com')
-     * @param array $condition  array('id' => 2, 'name' => 'jack')
+     * @param array $condition array('id' => 2, 'name' => 'jack')
      * @return bool
      */
     public function update($table, array $parameter, array $condition = array())
     {
         $parameters = '';
-        foreach($parameter as $k=>$v)
-        {
-            $parameters[] = $k .' = '.$v;
+        foreach ($parameter as $k => $v) {
+            $parameters[] = $k . "='" . $v . "'";
         }
         $where = '';
-        if(!empty($condition)) {
+        if (!empty($condition)) {
             $conditions = array();
             foreach ($condition as $k => $v) {
                 $conditions[] = $k . ' = :' . $k;
             }
-            $where =  " WHERE ". implode(' AND ', $conditions);
+            $where = " WHERE " . implode(' AND ', $conditions);
         }
-        $stmt = $this->prepare("UPDATE {$table} SET " . implode(',',$parameters) . $where);
-        if(!empty($condition)) {
+        $stmt = $this->prepare("UPDATE {$table} SET " . implode(',', $parameters) . $where);
+        if (!empty($condition)) {
             foreach ($condition as $k => $v) {
                 $stmt->bindValue(':' . $k, $v);
             }
         }
-        if($stmt->execute()){
+        if ($stmt->execute()) {
             return true;
-        }else{
+        } else {
             return false;
         }
     }
@@ -179,9 +187,9 @@ class Mysql extends PDO{
     {
         $sql = "DROP TABLE {$table}";
         $rs = $this->query($sql);
-        if($rs){
+        if ($rs) {
             return true;
-        }else{
+        } else {
             return false;
         }
     }

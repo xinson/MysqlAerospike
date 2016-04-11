@@ -78,46 +78,6 @@ class Connection
         $data = $this->prepareInsertData($set, $parameter);
         $pkValue = $this->fnGet($data, $pk = $this->getTableDefinitions($set, 'pk'));
         $key = $this->aerospike->initKey($this->namespace, $set, $pkValue);
-
-        /**
-         *
-         *
-         * $key
-         * Array
-         * (
-         * [ns] => appgame
-         * [set] => users
-         * [key] => 1016414
-         * )
-         *
-         *
-         * $data
-         * Array
-         * (
-         * [username] => tester001
-         * [email] => tester001@appgame.com
-         * [password] => $2y$05$PTEp2NuT7dmHR9gF5CZv/uRLO0h4BK1J43VhwiVZXaAVnmcYAduQK
-         * [salt] => d16bba
-         * [confirmed] => 1
-         * [updated_at] => 2016-03-16 07:28:45
-         * [created_at] => 2016-03-16 07:28:45
-         * [id] => 1016414
-         * [_username] => tester001
-         * [_email] => tester001@appgame.com
-         * [_long_keys] => Array
-         * (
-         * [confirmation_code] => aefe5f5e4e6cd6ebc72828acfb27c4fa
-         * )
-         * )
-         *
-         * $query->getTtl()
-         * 0
-         *
-         * $options
-         * Array
-         * (
-         * )
-         */
         $status = $this->aerospike->put($key, $data, 0, $options);
         if ($status == Aerospike::OK) {
             //$this->syncToMysql($set, $bindings, $pk, $pkValue);
@@ -292,6 +252,32 @@ class Connection
 
     /**
      * @param $table
+     * @return $this
+     */
+    public function removeTableDefinition($table)
+    {
+        $key = $this->aerospike->initKey($this->namespace, 'tables', $table);
+        $this->aerospike->remove($key);
+        return $this;
+    }
+
+    /**
+     * @param null $table
+     * @return $this
+     */
+    public function resetTableDefinitions($table = null)
+    {
+        if ($table === null) {
+            $this->tableDefinitions = array();
+        } else {
+            unset($this->tableDefinitions, $table);
+        }
+        return $this;
+    }
+
+
+    /**
+     * @param $table
      * @param array $indices
      */
     public function createIndices($table, array $indices)
@@ -317,6 +303,12 @@ class Connection
         }
     }
 
+    public function migrationSaveStartId($table, $startId)
+    {
+        $key = $this->aerospike->initKey($this->namespace, 'migration', $table);
+        $this->aerospike->put($key, array('start_id' => $startId), 0);
+        return $this;
+    }
 
     public function migrationGetStartId($table)
     {
@@ -335,9 +327,9 @@ class Connection
     }
 
 
-    public function saveTableToAerospike($table)
+    public function saveMysqlTableToAerospike($table)
     {
-        //$skipExisting = !$this->option('override');
+        $skipExisting = !$this->option('override');
         $perBatch = 100;
         $aerospike = $this->aerospike;
 
@@ -345,19 +337,19 @@ class Connection
         $startId = $this->migrationGetStartId($table) ?: 0;
         $count = $this->getMigrationCount($table, $startId, $idField);
         if (!$count) {
-            //$this->output->writeln('<info>No user mobile need to be migrated.</info>');
+            echo "No user mobile need to be migrated.\n";
             return;
         }
         $rounds = ceil($count / $perBatch);
-        //$this->output->writeln('<comment>Migrating user mobile...</comment>');
-        $progress = $this->_startProgressBar($count);
+        echo 'Migrating user ' . $table . "...\n";
+        $progress = $this->startProgressBar($count);
         $processed = 0;
         $batchProcess = 0;
-        $key = $aerospike->initKey($this->namespace, 'user_mobile', 0);
-        $UserMobileQuery = UserMobile::query()->getQuery();
+        $key = $aerospike->initKey($this->namespace, $table, 0);
+        $UserMobileQuery = $this->getDb()->query();
         for ($i = 0; $i < $rounds; ++$i) {
             $batchProcess = 0;
-            if (!$usersMobile = $this->_getMigrationData($table, $startId, $perBatch, $idField)) {
+            if (!$usersMobile = $this->getMigrationData($table, $startId, $perBatch, $idField)) {
                 break;
             }
             $userMobileIds = array_keys($usersMobile);
@@ -368,16 +360,16 @@ class Connection
                 if ($skipExisting && $aerospike->get($key, $result, array()) == $aerospike::OK) {
                     continue;
                 }
-                $connection->insert($UserMobileQuery, (array)$um);
+                $this->insert($UserMobileQuery, (array)$um);
                 ++$processed;
             }
-            $connection->migrationSaveStartId($table, $startId);
+            $this->migrationSaveStartId($table, $startId);
             $batchProcess == $perBatch and $progress->advance($batchProcess);
         }
         $batchProcess and $progress->advance($batchProcess);
         $progress->finish();
         $skipped = $count - $processed;
-        $this->output->writeln("<info>Migrated {$processed} mobiles, skipped {$skipped} mobiles.</info>");
+        echo "Migrated {$processed} mobiles, skipped {$skipped} mobiles.\n";
     }
 
 
