@@ -1,5 +1,5 @@
 <?php
-namespace xinson\MysqlAerospike;
+namespace Xinson\MysqlAerospike;
 
 use Aerospike;
 

@@ -1,4 +1,4 @@
 <?php
-namespace xinson\MysqlAerospike;
+namespace Xinson\MysqlAerospike;
 
 class ConnectionException extends \RuntimeException {}
