@@ -200,7 +200,7 @@ class Connection
     public function getTableDefinitions($table, $definitionItem = null)
     {
         if (!isset($this->tableDefinitions[$table])) {
-            $key = $this->aerospike->initKey($this->namespace, '_tables', $table);
+            $key = $this->aerospike->initKey($this->namespace, 'tables', $table);
             $status = $this->aerospike->get($key, $record);
             if ($status == Aerospike::ERR_RECORD_NOT_FOUND) {
                 $record = false;
@@ -320,57 +320,11 @@ class Connection
     protected function getMigrationCount($table, $startId, $idField = 'id')
     {
         $mysql = $this->getDb();
-        $count = $mysql->query(sprintf('SELECT COUNT(`%s`) `count` FROM `%s` WHERE `%s` > ?', $idField, $table,
-            $idField), array($startId));
-        $count = $this->fnGet($count, 'count');
+        $rs = $mysql->getOne($table, array("COUNT(`{$idField}`) as `count`"), "`{$idField}` > {$startId}");
+        $count = $this->fnGet($rs, 'count');
         return $count;
     }
 
-
-    public function saveMysqlTableToAerospike($table)
-    {
-        $skipExisting = !$this->option('override');
-        $perBatch = 100;
-        $aerospike = $this->aerospike;
-
-        $idField = 'id';
-        $startId = $this->migrationGetStartId($table) ?: 0;
-        $count = $this->getMigrationCount($table, $startId, $idField);
-        if (!$count) {
-            echo "No user mobile need to be migrated.\n";
-            return;
-        }
-        $rounds = ceil($count / $perBatch);
-        echo 'Migrating user ' . $table . "...\n";
-        $progress = $this->startProgressBar($count);
-        $processed = 0;
-        $batchProcess = 0;
-        $key = $aerospike->initKey($this->namespace, $table, 0);
-        $UserMobileQuery = $this->getDb()->query();
-        for ($i = 0; $i < $rounds; ++$i) {
-            $batchProcess = 0;
-            if (!$usersMobile = $this->getMigrationData($table, $startId, $perBatch, $idField)) {
-                break;
-            }
-            $userMobileIds = array_keys($usersMobile);
-            $startId = max($userMobileIds);
-            foreach ($usersMobile as $id => $um) {
-                ++$batchProcess;
-                $key['key'] = $id;
-                if ($skipExisting && $aerospike->get($key, $result, array()) == $aerospike::OK) {
-                    continue;
-                }
-                $this->insert($UserMobileQuery, (array)$um);
-                ++$processed;
-            }
-            $this->migrationSaveStartId($table, $startId);
-            $batchProcess == $perBatch and $progress->advance($batchProcess);
-        }
-        $batchProcess and $progress->advance($batchProcess);
-        $progress->finish();
-        $skipped = $count - $processed;
-        echo "Migrated {$processed} mobiles, skipped {$skipped} mobiles.\n";
-    }
 
 
 }

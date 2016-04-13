@@ -38,87 +38,59 @@ class Mysql extends PDO
     /**
      * @param $table
      * @param array $field array('id', 'name')
-     * @param array $condition array('id' => 2, 'name' => 'jack')
+     * @param $where "id = 2"
      * @return mixed
      */
-    public function getOne($table, array $field = array(), array $condition = array())
+    public function getOne($table, array $field = array(), $where)
     {
         if (empty($field)) {
             $fields = '*';
         } else {
             $fields = implode(',', $field);
         }
-        $where = '';
-        if (!empty($condition)) {
-            $conditions = array();
-            foreach ($condition as $k => $v) {
-                $conditions[] = $k . ' = :' . $k;
-            }
-            $where = " WHERE " . implode(' AND ', $conditions);
+        $sqlwhere = '';
+        if (!empty($where)) {
+            $sqlwhere = " WHERE " . $where;
         }
-        $stmt = $this->prepare("SELECT {$fields} FROM {$table} $where");
-        if (!empty($condition)) {
-            foreach ($condition as $k => $v) {
-                $stmt->bindValue(':' . $k, $v);
-            }
-        }
-        $stmt->execute();
-        return $stmt->fetch(PDO::FETCH_ASSOC);
-
+        $query = $this->query("SELECT {$fields} FROM {$table} $sqlwhere");
+        return $query->fetch(PDO::FETCH_ASSOC);
     }
 
     /**
      * @param $table
      * @param array $field array('id', 'name')
-     * @param array $condition array('id' => 2, 'name' => 'jack')
+     * @param $where "id = 2"
      * @return mixed
      */
-    public function getAll($table, array $field = array(), array $condition = array())
+    public function getAll($table, array $field = array(), $where)
     {
         if (empty($field)) {
             $fields = '*';
         } else {
             $fields = implode(',', $field);
         }
-        $where = '';
-        if (!empty($condition)) {
-            $conditions = array();
-            foreach ($condition as $k => $v) {
-                $conditions[] = $k . ' = :' . $k;
-            }
-            $where = " WHERE " . implode(' AND ', $conditions);
+        $sqlwhere = '';
+        if (!empty($where)) {
+            $sqlwhere = " WHERE " . $where;
         }
-        $stmt = $this->prepare("SELECT {$fields} FROM {$table} $where");
-        if (!empty($condition)) {
-            foreach ($condition as $k => $v) {
-                $stmt->bindValue(':' . $k, $v);
-            }
-        }
-        $stmt->execute();
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $query = $this->query("SELECT {$fields} FROM {$table} $sqlwhere");
+        return $query->fetchAll(PDO::FETCH_ASSOC);
     }
 
 
     /**
      * @param $table
-     * @param array $condition array('id' => 2, 'name' => 'jack')
+     * @param $where "id = 2"
      * @return bool
      */
-    public function delete($table, array $condition)
+    public function delete($table, $where)
     {
-        if (empty($condition)) {
+        if (empty($where)) {
             return false;
         }
-        $conditions = array();
-        foreach ($condition as $k => $v) {
-            $conditions[] = $k . '= :' . $k;
-        }
-        $where = " WHERE " . implode(' AND ', $conditions);
-        $stmt = $this->prepare("DELETE FROM {$table} {$where}");
-        foreach ($condition as $k => $v) {
-            $stmt->bindValue(':' . $k, $v);
-        }
-        if ($stmt->execute()) {
+        $sqlwhere = " WHERE " . $where;
+        $res = $this->query("DELETE FROM {$table} {$sqlwhere}");
+        if ($res) {
             return true;
         } else {
             return false;
@@ -149,30 +121,21 @@ class Mysql extends PDO
     /**
      * @param $table
      * @param array $parameter array('name' => 'jack', 'email' => 'someone@email.com')
-     * @param array $condition array('id' => 2, 'name' => 'jack')
+     * @param $where "id = 2"
      * @return bool
      */
-    public function update($table, array $parameter, array $condition = array())
+    public function update($table, array $parameter, $where)
     {
         $parameters = '';
         foreach ($parameter as $k => $v) {
             $parameters[] = $k . "='" . $v . "'";
         }
-        $where = '';
-        if (!empty($condition)) {
-            $conditions = array();
-            foreach ($condition as $k => $v) {
-                $conditions[] = $k . ' = :' . $k;
-            }
-            $where = " WHERE " . implode(' AND ', $conditions);
+        $sqlwhere = '';
+        if (!empty($where)) {
+            $sqlwhere = " WHERE " . $where;
         }
-        $stmt = $this->prepare("UPDATE {$table} SET " . implode(',', $parameters) . $where);
-        if (!empty($condition)) {
-            foreach ($condition as $k => $v) {
-                $stmt->bindValue(':' . $k, $v);
-            }
-        }
-        if ($stmt->execute()) {
+        $query = $this->query("UPDATE {$table} SET " . implode(',', $parameters) . $sqlwhere);
+        if ($query) {
             return true;
         } else {
             return false;

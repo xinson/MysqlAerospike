@@ -1,6 +1,7 @@
 <?php
 include __DIR__.'/src/MysqlAerospike/Connection.php';
 include __DIR__.'/src/MysqlAerospike/Mysql.php';
+include __DIR__.'/src/MysqlAerospike/ConnectionException.php';
 
 $config = array(
     'connection_config' => array(
@@ -19,7 +20,7 @@ $config = array(
     ) : array(),
     'namespace' => 'test',
     'indices' => array(
-        'user' => array(
+        'demo_user' => array(
             'username' => array(
                 'bin' => 'username',
                 'type' => 'string_ci',
@@ -45,26 +46,27 @@ $config = array(
 /*
 $mysql = new \xinson\MysqlAerospike\Mysql($config['mysql']['service'], $config['mysql']['database'],
 $config['mysql']['user'], $config['mysql']['password']);
-$mysql->query("CREATE TABLE `user` (
-  `username` VARCHAR(16) NOT NULL,
-  `email` VARCHAR(255) NULL,
-  `password` VARCHAR(32) NOT NULL,
-  `create_time` TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP)");
-$data = $mysql->insert('user',  array( 'username' => 'xinson', 'email' => '513730858@qq.com'));
-$data = $mysql->update('user',  array('username' => 'xinson1'), array('id' => 1));
-$data = $mysql->getOne('user', array(), array('id' => 1));
-$data = $mysql->getAll('user', array(), array('id' => 1));
-$data = $mysql->delete('user',  array('id' => 2));
+$mysql->query("CREATE TABLE IF NOT EXISTS `demo_user` (
+  `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `username` varchar(255) NOT NULL COMMENT '用户名称',
+  `email` varchar(255) DEFAULT '' COMMENT '用户邮箱',
+  PRIMARY KEY (`id`),
+  KEY `username` (`username`)
+) ENGINE=InnoDB  DEFAULT CHARSET=utf8 COMMENT='用户表' AUTO_INCREMENT=1");
+//$data = $mysql->insert('demo_user',  array( 'username' => 'xinson', 'email' => '513730858@qq.com'));
+//$data = $mysql->update('demo_user',  array('username' => 'xinson1'), "username = 'xinson'");
+$data = $mysql->getOne('demo_user', array(), "id = 1");
+//$data = $mysql->getAll('demo_user', array(), "id = 1");
+//$data = $mysql->delete('demo_user',  "id = 1");
 */
-$Aerospike = new \xinson\MysqlAerospike\Connection($config);
 
-/*
+$Aerospike = new \xinson\MysqlAerospike\Connection($config);
 foreach ($config['indices'] as $table => $indexDef) {
     $Aerospike->createIndices($table, $indexDef);
 }
-*/
-//$Aerospike->saveTableDefinition('user');
+
+//$Aerospike->saveTableDefinition('demo_user');
 //$Aerospike->removeTableDefinition('user');
-$Aerospike->saveMysqlTableToAerospike('user');
+$Aerospike->saveMysqlTableToAerospike('demo_user');
 
 
