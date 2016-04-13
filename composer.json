@@ -1,5 +1,5 @@
 {
-    "name": "xinson/mysqlAerospike",
+    "name": "xinson/mysql-aerospike",
     "description": "Mysql Aerospike combined use",
     "license": "MIT",
     "keywords": ["mysql aerospike"],
